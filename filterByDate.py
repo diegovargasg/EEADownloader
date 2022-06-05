@@ -28,12 +28,8 @@ import glob
 path = "csv_filtered"
 all_filtered_files = glob.glob(os.path.join(path, "*.csv"))
 
-li = []
-
 for pFile in all_filtered_files:
     print("Concatenates "+pFile.split('\\')[-1])
     df = pd.concat((pd.read_csv(f) for f in all_filtered_files))
-    li.append(df)
 
-frame = pd.concat(li, axis=0, ignore_index=True)
-frame.to_csv("csv_single_file_filtered/csv_filtered.csv", index=False)
+df.to_csv("csv_single_file_filtered/csv_filtered.csv", index=False)
