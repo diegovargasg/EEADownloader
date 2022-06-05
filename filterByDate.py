@@ -4,32 +4,54 @@ import os
 import glob
  
 # path = "csv"
-# all_files = glob.glob(os.path.join(path, "*.csv"))
+# allFiles = glob.glob(os.path.join(path, "*.csv"))
 
-# for pFile in all_files:
+# for pFile in allFiles:
 #     fileName = pFile.split('\\')[-1]
 #     print("Ready to filter "+fileName)
 
 #     # read file
-#     df = pd.read_csv(pFile)
+#     dataFrame = pd.read_csv(pFile)
 
 #     # # convert to datetime
-#     df['DatetimeBegin'] = pd.to_datetime(df['DatetimeBegin'])
+#     dataFrame['DatetimeBegin'] = pd.to_datetime(dataFrame['DatetimeBegin'])
 
 #     # # calculate mask
-#     mask = df['DatetimeBegin'].between('2020-04-01', '2020-04-30')
+#     mask = dataFrame['DatetimeBegin'].between('2020-04-01', '2020-04-30')
 
 #     # # output masked dataframes
-#     df[mask].to_csv("csv_filtered/"+fileName+"_filtered.csv", index=False)
+#     dataFrame[mask].to_csv("csv_april_filtered/"+fileName+"_filtered.csv", index=False)
 #     print("Done with filter "+fileName)
 
-# concatenates all filtered files
 
-path = "csv_filtered"
-all_filtered_files = glob.glob(os.path.join(path, "*.csv"))
 
-for pFile in all_filtered_files:
-    print("Concatenates "+pFile.split('\\')[-1])
-    df = pd.concat((pd.read_csv(f) for f in all_filtered_files))
+#### Calculates the average per point
 
-df.to_csv("csv_single_file_filtered/csv_filtered.csv", index=False)
+# path = "csv_filtered"
+# allFilteredFiles = glob.glob(os.path.join(path, "*.csv"))
+
+# for pFile in allFilteredFiles:
+#     # get file name
+#     fileName = pFile.split('\\')[-1]
+
+#     # read file
+#     dataFrame = pd.read_csv(pFile)
+
+#     # Calculate mask
+#     newDataFrame = dataFrame.groupby(['AirQualityStation', 'UnitOfMeasurement'])['Concentration'].agg(['mean']).reset_index()
+
+#     #calculate mean concentration
+#     newDataFrame.to_csv("csv_mean_concentration/"+fileName+"_mean_concentration.csv", index=False)
+#     print("saves mean concentration for "+fileName)
+
+
+#### concatenates all filtered files
+
+# path = "csv_mean_concentration"
+# allFilteredFiles = glob.glob(os.path.join(path, "*.csv"))
+
+# for pFile in allFilteredFiles:
+#     print("Concatenates "+pFile.split('\\')[-1])
+#     dataFrame = pd.concat((pd.read_csv(f) for f in allFilteredFiles))
+
+# dataFrame.to_csv("csv_single_file_filtered/csv_filtered.csv", index=False)
