@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import glob
 
-year="2022"
+year="2019"
 
 
 
@@ -40,16 +40,16 @@ totalLenFiles = len(allFilteredFiles)
 countFilesProccessed = 1
 
 for pFile in allFilteredFiles:
-    # get file name
+    ## get file name
     fileName = pFile.split('\\')[-1]
 
-    # read file
+    ## read file
     dataFrame = pd.read_csv(pFile)
 
-    # Calculate mask
-    newDataFrame = dataFrame.groupby(['AirQualityStation', 'UnitOfMeasurement'])['Concentration'].agg(['mean']).reset_index()
+    ## Calculate mask
+    newDataFrame = dataFrame[dataFrame["Validity"] == 1].groupby(['AirQualityStation']).mean().reset_index()
 
-    #calculate mean concentration
+    ## calculate mean concentration
     newDataFrame.to_csv(year+"_csv_mean_concentration/"+fileName+"_mean_concentration.csv", index=False)
     print("saves mean concentration for "+fileName+", files left "+str( totalLenFiles-countFilesProccessed))
     countFilesProccessed += 1
@@ -67,4 +67,17 @@ for pFile in allFilteredFiles:
     print("Concatenates "+pFile.split('\\')[-1]+", files left "+str( totalLenFiles-countFilesProccessed))
     countFilesProccessed += 1
 
-dataFrame.to_csv(year+"_csv_final_file_filtered/csv_filtered.csv", index=False)
+dataFrame.to_csv(year+"_csv_concatenated/"+year+"_concatenated.csv", index=False)
+
+#### Filters again by AirStation and generates the final file
+
+## read file
+dataFrame = pd.read_csv(year+"_csv_concatenated/"+year+"_concatenated.csv")
+
+## Calculate mask
+newDataFrame = dataFrame.groupby(['AirQualityStation']).mean().reset_index()
+
+## calculate mean concentration
+newDataFrame.to_csv(year+"_csv_final_file/"+year+"_final.csv", index=False)
+print("###########################")
+print("saves final file for Year "+year)
