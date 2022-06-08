@@ -1,18 +1,68 @@
-# importing csv module
 import pandas as pd
 import os
 import glob
+import psycopg2
 
-year="2019"
+from dotenv import load_dotenv
 
+load_dotenv()
+YEAR=os.getenv('YEAR')
+DBHOST=os.getenv('DBHOST') 
+DBNAME=os.getenv('DBNAME')
+DBUSER=os.getenv('DBUSER')
+DBPASS=os.getenv('DBPASS')
 
+##### Clean up all folders
 
-#### Filters the date by april
+dir = YEAR+"_csv_april_filtered"
+filelist = glob.glob(os.path.join(dir, "*"))
+for f in filelist:
+    os.remove(f)
 
-path = year+"_csv"
+### Filters the date by april
+
+path = YEAR+"_csv"
 allFiles = glob.glob(os.path.join(path, "*.csv"))
 totalLenFiles = len(allFiles)
 countFilesProccessed = 1
+
+for pFile in allFiles:
+    fileName = pFile.split('\\')[-1]
+    fileName = fileName.split('.')[0]
+
+    # read file and ignore invalid entries
+    dataFrame = pd.read_csv(pFile, usecols = ['AirQualityStation','Concentration', 'DatetimeBegin', 'Validity'])
+    dataFrame = dataFrame[(dataFrame["Validity"] == 1)]
+
+    # convert to datetime
+    dataFrame['DatetimeBegin'] = pd.to_datetime(dataFrame['DatetimeBegin'])
+
+    # calculate mask
+    mask = dataFrame['DatetimeBegin'].between(YEAR+'-04-01', YEAR+'-04-30')
+
+    ## output masked dataframes
+    dataFrame[mask].to_csv(YEAR+"_csv_april_filtered/"+fileName+".csv", index=False)
+    print("Done with filter "+fileName+", files left "+str( totalLenFiles-countFilesProccessed))
+    countFilesProccessed += 1
+
+#### Stores the filtered CSV in the database
+
+conn = psycopg2.connect("host="+DBHOST+" dbname="+DBNAME+" user="+DBUSER+" password="+DBPASS+"")
+cur = conn.cursor()
+
+path = YEAR+"_csv"
+allFiles = glob.glob(os.path.join(path+"_april_filtered/", "*.csv"))
+totalLenFiles = len(allFiles)
+countFilesProccessed = 1
+
+cur.execute("DROP TABLE IF EXISTS year_"+YEAR+";")
+
+cur.execute('''CREATE TABLE year_'''+YEAR+'''(
+  AirQualityStation        VARCHAR(100) NOT NULL,
+  Concentration            DECIMAL NOT NULL,
+  DatetimeBegin            VARCHAR(100) NOT NULL,
+  Validity                 INTEGER  NOT NULL
+);''')
 
 for pFile in allFiles:
     fileName = pFile.split('\\')[-1]
@@ -20,64 +70,12 @@ for pFile in allFiles:
     # read file
     dataFrame = pd.read_csv(pFile)
 
-    # # convert to datetime
-    dataFrame['DatetimeBegin'] = pd.to_datetime(dataFrame['DatetimeBegin'])
+    with open('D:/Projekte/basic_server/'+path+"_april_filtered/"+fileName, 'r') as f:
+  
+        next(f) #  To Skip the header row.
+        cur.copy_from(f, 'year_'+YEAR, sep=',')
 
-    # # calculate mask
-    mask = dataFrame['DatetimeBegin'].between(year+'-04-01', year+'-04-30')
-
-    # # output masked dataframes
-    dataFrame[mask].to_csv(year+"_csv_april_filtered/"+fileName+"_filtered.csv", index=False)
-    print("Done with filter "+fileName+", files left "+str( totalLenFiles-countFilesProccessed))
+    conn.commit()
+    
+    print("Save in Database "+fileName+", files left "+str( totalLenFiles-countFilesProccessed))
     countFilesProccessed += 1
-
-
-#### Calculates the average per point
-
-path = year+"_csv_april_filtered"
-allFilteredFiles = glob.glob(os.path.join(path, "*.csv"))
-totalLenFiles = len(allFilteredFiles)
-countFilesProccessed = 1
-
-for pFile in allFilteredFiles:
-    ## get file name
-    fileName = pFile.split('\\')[-1]
-
-    ## read file
-    dataFrame = pd.read_csv(pFile)
-
-    ## Calculate mask
-    newDataFrame = dataFrame[dataFrame["Validity"] == 1].groupby(['AirQualityStation']).mean().reset_index()
-
-    ## calculate mean concentration
-    newDataFrame.to_csv(year+"_csv_mean_concentration/"+fileName+"_mean_concentration.csv", index=False)
-    print("saves mean concentration for "+fileName+", files left "+str( totalLenFiles-countFilesProccessed))
-    countFilesProccessed += 1
-
-
-#### concatenates all filtered files
-
-path = year+"_csv_mean_concentration"
-allFilteredFiles = glob.glob(os.path.join(path, "*.csv"))
-totalLenFiles = len(allFilteredFiles)
-countFilesProccessed = 1
-
-for pFile in allFilteredFiles:
-    dataFrame = pd.concat((pd.read_csv(f) for f in allFilteredFiles))
-    print("Concatenates "+pFile.split('\\')[-1]+", files left "+str( totalLenFiles-countFilesProccessed))
-    countFilesProccessed += 1
-
-dataFrame.to_csv(year+"_csv_concatenated/"+year+"_concatenated.csv", index=False)
-
-#### Filters again by AirStation and generates the final file
-
-## read file
-dataFrame = pd.read_csv(year+"_csv_concatenated/"+year+"_concatenated.csv")
-
-## Calculate mask
-newDataFrame = dataFrame.groupby(['AirQualityStation']).mean().reset_index()
-
-## calculate mean concentration
-newDataFrame.to_csv(year+"_csv_final_file/"+year+"_final.csv", index=False)
-print("###########################")
-print("saves final file for Year "+year)
